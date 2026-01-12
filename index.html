@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en"> 
+ <head> 
+  <meta charset="UTF-8"> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>Weather App</title> 
+  <style>
+/* ===================== BASE ===================== */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-size: 400% 400%;
+    animation: gradientMove 12s ease infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #fff;
+    overflow: hidden;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+h1 {
+    text-shadow: 2px 2px 4px #000;
+}
+
+/* ================= WEATHER BACKGROUNDS ================= */
+.sunny {
+    background-image: linear-gradient(135deg, #f6d365, #fda085);
+}
+
+.cloudy {
+    background-image: linear-gradient(135deg, #bdc3c7, #2c3e50);
+}
+
+.rainy {
+    background-image: linear-gradient(135deg, #4b79a1, #283e51);
+}
+
+/* ===================== CLOUDS ===================== */
+.cloud {
+    position: absolute;
+    background: rgba(255,255,255,0.7);
+    border-radius: 50%;
+    width: 120px;
+    height: 60px;
+    animation: moveClouds linear infinite;
+}
+
+.cloud::before,
+.cloud::after {
+    content: "";
+    position: absolute;
+    background: rgba(255,255,255,0.7);
+    border-radius: 50%;
+}
+
+.cloud::before {
+    width: 60px;
+    height: 60px;
+    top: -30px;
+    left: 15px;
+}
+
+.cloud::after {
+    width: 80px;
+    height: 80px;
+    top: -40px;
+    right: 15px;
+}
+
+@keyframes moveClouds {
+    from { transform: translateX(-200px); }
+    to { transform: translateX(120vw); }
+}
+
+/* ===================== RAIN ===================== */
+.rain {
+    position: absolute;
+    width: 2px;
+    height: 20px;
+    background: rgba(255,255,255,0.6);
+    animation: rainFall 0.6s linear infinite;
+}
+
+@keyframes rainFall {
+    from { transform: translateY(-100px); }
+    to { transform: translateY(100vh); }
+}
+
+/* ===================== UI ===================== */
+.weather-box {
+    background: rgba(255, 255, 255, 0.3);
+    padding: 25px;
+    border-radius: 20px;
+    width: 320px;
+    text-align: center;
+    box-shadow: 0px 0px 15px #0005;
+    margin-top: 20px;
+    display: none;
+    z-index: 10;
+}
+
+input {
+    padding: 10px;
+    width: 250px;
+    border-radius: 10px;
+    border: none;
+    margin-bottom: 10px;
+    outline: none;
+    font-size: 16px;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    background: #4a90e2;
+    color: white;
+    margin: 5px;
+}
+
+button:hover {
+    background: #357abd;
+}
+
+img {
+    width: 90px;
+}
+
+.details {
+    margin-top: 10px;
+    font-size: 18px;
+}
+
+/* ===================== POPUP ===================== */
+.popup {
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    position: fixed;
+    top: 20px;
+    display: none;
+    font-size: 18px;
+    animation: fade 2s linear forwards;
+    z-index: 20;
+}
+
+@keyframes fade {
+    0% {opacity: 1;}
+    100% {opacity: 0;}
+}
+</style> 
+ </head> 
+ <body class="sunny"> 
+  <h1>Weather App</h1> 
+  <div id="effects"></div> 
+  <div class="popup" id="popup"></div> 
+  <input type="text" id="cityInput" placeholder="Enter city name..."> <button onclick="getWeatherByCity()">Search</button> <button onclick="getLocationWeather()">Use My Location</button> 
+  <div class="weather-box" id="weatherBox"> 
+   <h2 id="locationName"></h2> 
+   <img id="weatherIcon"> 
+   <h3 id="temperature"></h3> 
+   <p id="condition"></p> 
+   <div class="details"> 
+    <p id="humidity"></p> 
+    <p id="wind"></p> 
+   </div> 
+  </div> 
+  <script>
+const API_KEY = "b33cab36ef1860b8b246f6b1959b5f48";
+
+/* ================= POPUP ================= */
+function showPopup(message) {
+    const pop = document.getElementById("popup");
+    pop.textContent = message;
+    pop.style.display = "block";
+    setTimeout(() => pop.style.display = "none", 2000);
+}
+
+/* ================= WEATHER ================= */
+function getWeatherByCity() {
+    const city = document.getElementById("cityInput").value.trim();
+    if (!city) return showPopup("⚠ Enter city name");
+    fetchWeather(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`);
+}
+
+function getLocationWeather() {
+    if (!navigator.geolocation) return showPopup("Geolocation not supported");
+    navigator.geolocation.getCurrentPosition(pos => {
+        fetchWeather(`https://api.openweathermap.org/data/2.5/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&appid=${API_KEY}&units=metric`);
+    });
+}
+
+function fetchWeather(url) {
+    showPopup("Loading weather...");
+    fetch(url)
+        .then(res => res.json())
+        .then(data => displayWeather(data))
+        .catch(() => showPopup("Error fetching data"));
+}
+
+/* ================= EFFECTS ================= */
+function clearEffects() {
+    document.body.classList.remove("sunny","cloudy","rainy");
+    document.getElementById("effects").innerHTML = "";
+}
+
+function addClouds(count) {
+    for (let i = 0; i < count; i++) {
+        const cloud = document.createElement("div");
+        cloud.className = "cloud";
+        cloud.style.top = Math.random() * 200 + "px";
+        cloud.style.animationDuration = (40 + Math.random() * 40) + "s";
+        document.getElementById("effects").appendChild(cloud);
+    }
+}
+
+function addRain(count = 100) {
+    for (let i = 0; i < count; i++) {
+        const drop = document.createElement("div");
+        drop.className = "rain";
+        drop.style.left = Math.random() * window.innerWidth + "px";
+        drop.style.animationDelay = Math.random() + "s";
+        document.getElementById("effects").appendChild(drop);
+    }
+}
+
+/* ================= DISPLAY ================= */
+function displayWeather(data) {
+    if (data.cod !== 200) return showPopup("❌ City not found");
+
+    clearEffects();
+    const condition = data.weather[0].main.toLowerCase();
+
+    if (condition.includes("rain")) {
+        document.body.classList.add("rainy");
+        addRain();
+        addClouds(2);
+    } else if (condition.includes("cloud")) {
+        document.body.classList.add("cloudy");
+        addClouds(4);
+    } else {
+        document.body.classList.add("sunny");
+        addClouds(1);
+    }
+
+    document.getElementById("weatherBox").style.display = "block";
+    document.getElementById("locationName").textContent = `${data.name}, ${data.sys.country}`;
+    document.getElementById("temperature").textContent = `${data.main.temp}°C`;
+    document.getElementById("condition").textContent = data.weather[0].description;
+    document.getElementById("humidity").textContent = `Humidity: ${data.main.humidity}%`;
+    document.getElementById("wind").textContent = `Wind Speed: ${data.wind.speed} m/s`;
+    document.getElementById("weatherIcon").src =
+        `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+}
+</script> 
+ </body>
+</html>
